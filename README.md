@@ -78,5 +78,18 @@ A premium, responsive Flask application for managing your daily tasks with ease.
 
 ---
 
+## ▲ Deployment Instructions (Vercel)
+
+1. **GitHub Integration**:
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard).
+   - Click **"Add New..."** > **"Project"**.
+   - Import your `To-Do-Web-app` repository.
+2. **Settings**:
+   - Vercel will automatically detect the `vercel.json` configuration.
+   - **Environment Variables**: Add `SECRET_KEY` and any other variables from your `.env`.
+3. **Database Caution**: 
+   - Since Vercel is serverless, a local SQLite file (`app.db`) will reset on every redeploy. 
+   - **Recommendation**: For production, use an external database like **Neon (Postgres)** or **PlanetScale** and update your `DATABASE_URL` in Vercel settings.
+
 ## 📄 License
 MIT License. Feel free to use this for your own projects!
