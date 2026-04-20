@@ -1,20 +1,29 @@
+import os
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from datetime import datetime
-from config import Config
+from dotenv import load_dotenv
+
+# Load .env if present
+load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(Config)
+
+# --- CONFIGURATION ---
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'dev-secret-key-12345'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Handle Vercel's read-only filesystem
+if os.environ.get('VERCEL'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:////tmp/app.db'
+else:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or \
+        'sqlite:///' + os.path.join(basedir, 'app.db')
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
-# Create tables within app context (Fallack for Vercel/Simple deploys)
-with app.app_context():
-    db.create_all()
-
-# Task Model
+# --- MODELS ---
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -22,9 +31,16 @@ class Task(db.Model):
     completed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __repr__(self):
-        return f'<Task {self.title}>'
+    def __init__(self, title, description=None, completed=False):
+        self.title = title
+        self.description = description
+        self.completed = completed
 
+# Initialize tables
+with app.app_context():
+    db.create_all()
+
+# --- ROUTES ---
 @app.route('/')
 def index():
     filter_type = request.args.get('filter', 'all')
