@@ -38,19 +38,29 @@ class Task(db.Model):
 
 # Initialize tables
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Initial DB creation failed: {e}")
 
 # --- ROUTES ---
 @app.route('/')
 def index():
     filter_type = request.args.get('filter', 'all')
     
+    # Final safety check for Serverless environments: try the query, rebuild if table missing
+    try:
+        query = Task.query.order_by(Task.created_at.desc())
+    except Exception:
+        db.create_all()
+        query = Task.query.order_by(Task.created_at.desc())
+
     if filter_type == 'completed':
-        tasks = Task.query.filter_by(completed=True).order_by(Task.created_at.desc()).all()
+        tasks = query.filter_by(completed=True).all()
     elif filter_type == 'pending':
-        tasks = Task.query.filter_by(completed=False).order_by(Task.created_at.desc()).all()
+        tasks = query.filter_by(completed=False).all()
     else:
-        tasks = Task.query.order_by(Task.created_at.desc()).all()
+        tasks = query.all()
         
     return render_template('index.html', tasks=tasks, current_filter=filter_type)
 
