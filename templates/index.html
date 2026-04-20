@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}My Tasks | TaskFlow{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="row mb-5 align-items-center">
+    <div class="col-md-6">
+        <h1 class="fw-bold tracking-tight mb-2">My Daily Tasks</h1>
+        <p class="text-secondary mb-0">Manage your productivity with ease.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <div class="btn-group shadow-sm p-1 bg-white rounded-pill">
+            <a href="{{ url_for('index', filter='all') }}" class="btn btn-sm rounded-pill px-4 {% if current_filter == 'all' %}btn-primary shadow-sm{% else %}btn-link text-decoration-none text-dark{% endif %}">All</a>
+            <a href="{{ url_for('index', filter='pending') }}" class="btn btn-sm rounded-pill px-4 {% if current_filter == 'pending' %}btn-primary shadow-sm{% else %}btn-link text-decoration-none text-dark{% endif %}">Pending</a>
+            <a href="{{ url_for('index', filter='completed') }}" class="btn btn-sm rounded-pill px-4 {% if current_filter == 'completed' %}btn-primary shadow-sm{% else %}btn-link text-decoration-none text-dark{% endif %}">Completed</a>
+        </div>
+    </div>
+</div>
+
+<!-- Task Grid -->
+<div class="row g-4 justify-content-center" id="taskContainer">
+    {% if tasks %}
+        {% for task in tasks %}
+        <div class="col-12 col-lg-8 animate-in" style="animation-delay: {{ loop.index0 * 0.1 }}s">
+            <div class="card border-0 shadow-sm rounded-4 hover-lift position-relative overflow-hidden">
+                {% if task.completed %}
+                <div class="position-absolute top-0 end-0 p-3">
+                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2">
+                        <i class="bi bi-check2-all me-1"></i> Completed
+                    </span>
+                </div>
+                {% endif %}
+                
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <a href="{{ url_for('toggle_task', task_id=task.id) }}" class="btn rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm" 
+                               style="width: 42px; height: 42px; border: 2px solid {% if task.completed %}#10b981; background: #10b981; color: white;{% else %}#e5e7eb; background: white; color: #9ca3af;{% endif %} transition: all 0.2s ease;">
+                                <i class="bi bi-check-lg fs-5"></i>
+                            </a>
+                        </div>
+                        <div class="col px-md-4">
+                            <h5 class="card-title fw-bold mb-1 {% if task.completed %}text-decoration-line-through text-muted{% endif %}">
+                                {{ task.title }}
+                            </h5>
+                            {% if task.description %}
+                            <p class="card-text text-secondary mb-2 small line-clamp-2">{{ task.description }}</p>
+                            {% endif %}
+                            <div class="d-flex align-items-center gap-3">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="bi bi-calendar3 me-1"></i> {{ task.created_at.strftime('%d %b') }}
+                                </small>
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="bi bi-clock me-1"></i> {{ task.created_at.strftime('%H:%M') }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-auto text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-light btn-sm rounded-circle shadow-none" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3">
+                                    <li>
+                                        <button class="dropdown-item py-2 d-flex align-items-center" 
+                                                onclick="populateEditModal('{{ task.id }}', '{{ task.title|e }}', '{{ (task.description or "")|e }}')"
+                                                data-bs-toggle="modal" data-bs-target="#editTaskModal">
+                                            <i class="bi bi-pencil me-2 text-primary"></i> Edit Details
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 d-flex align-items-center text-danger" href="{{ url_for('delete_task', task_id=task.id) }}" onclick="return confirm('Archive this task permanently?')">
+                                            <i class="bi bi-trash3 me-2"></i> Delete Forever
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12 col-md-6 text-center py-5">
+            <div class="p-5 bg-white rounded-5 shadow-sm">
+                <div class="mb-4 display-1 text-primary-subtle">
+                    <i class="bi bi-cup-hot"></i>
+                </div>
+                <h3 class="fw-bold">All clear!</h3>
+                <p class="text-secondary">You don't have any tasks in the <strong>{{ current_filter }}</strong> category.</p>
+                <button class="btn btn-primary rounded-pill px-4 py-2 mt-2" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                    Create First Task
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Floating Action Button for Mobile -->
+<button class="btn btn-primary rounded-circle shadow-lg d-lg-none position-fixed bottom-0 end-0 m-4 p-0 d-flex align-items-center justify-content-center" 
+        style="width: 60px; height: 60px; z-index: 1050; background: var(--primary-gradient);"
+        data-bs-toggle="modal" data-bs-target="#addTaskModal">
+    <i class="bi bi-plus-lg fs-3 text-white"></i>
+</button>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-primary text-white p-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>New Mission</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_task') }}" method="POST" class="needs-validation" novalidate>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Task Title</label>
+                        <input type="text" name="title" class="form-control form-control-lg border-2" placeholder="e.g. Finish project wireframes" required>
+                        <div class="invalid-feedback">Please provide a task title.</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-bold text-secondary">Description (Optional)</label>
+                        <textarea name="description" class="form-control border-2" rows="4" placeholder="Break it down into details..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm">Save Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-dark text-white p-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Update Task</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editTaskForm" method="POST" class="needs-validation" novalidate>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Task Title</label>
+                        <input type="text" name="title" id="edit-title" class="form-control form-control-lg border-2" required>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-bold text-secondary">Description</label>
+                        <textarea name="description" id="edit-description" class="form-control border-2" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal">Discard</button>
+                    <button type="submit" class="btn btn-dark px-4 py-2 rounded-pill fw-bold shadow-sm">Apply Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function populateEditModal(id, title, description) {
+    const form = document.getElementById('editTaskForm');
+    const titleInput = document.getElementById('edit-title');
+    const descInput = document.getElementById('edit-description');
+    
+    // Set form action dynamically
+    form.action = `/edit/${id}`;
+    
+    // Fill values
+    titleInput.value = title;
+    descInput.value = description;
+}
+</script>
+
+{% endblock %}
